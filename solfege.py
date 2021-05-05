@@ -85,14 +85,16 @@ tokens = [
 
 
 class Solfege:
-    generated_data = '/* lol */\n' \
-                     + '#include <stdio.h>\n' \
-                     + '#include <stdlib.h>\n' \
-                     + '\n\n' \
-                     + 'int main(int argc, char** argv) {\n' \
-                     + 'unsigned char* ptr = calloc(30000, 1);\n'
-
+    generated_data = ''
     def __init__(self):
+        if not is_bf:
+            self.generated_data += '/* lol */\n' \
+                         + '#include <stdio.h>\n' \
+                         + '#include <stdlib.h>\n' \
+                         + '\n\n' \
+                        + 'int main(int argc, char** argv) {\n' \
+                        + 'unsigned char* ptr = calloc(30000, 1);\n'
+
         self.print_data = ''
         self.put_data = ''
 
@@ -143,6 +145,45 @@ class Solfege:
             SolfegeTokens.Ra: self.ra,
             SolfegeTokens.Undefined: self.lol
         }[re]()
+
+    def bf_to_solfege(self, re):
+        {
+            '>': self.bf_do,
+            '<': self.bf_re,
+            '+': self.bf_mi,
+            '-': self.bf_fa,
+            '.': self.bf_sol,
+            ',': self.bf_la,
+
+            '[': self.bf_statement,
+            ']': self.bf_resharp
+        }.get(re, self.bf_lol)()
+
+    def bf_do(self):
+        self.generated_data += 'Do '
+
+    def bf_re(self):
+        self.generated_data += 'Re '
+
+    def bf_mi(self):
+        self.generated_data += 'Mi '
+
+    def bf_fa(self):
+        self.generated_data += 'Fa '
+
+    def bf_sol(self):
+        self.generated_data += 'Sol '
+
+    def bf_la(self):
+        self.generated_data += 'La '
+
+    def bf_statement(self):
+        self.generated_data += 'Ra Fa# Do# Sol# Mi# '
+
+    def bf_resharp(self):
+        self.generated_data += 'Re# '
+
+    def bf_lol(self): pass
 
     def do(self):
         self.generated_data += '++ptr;\n'
@@ -246,20 +287,45 @@ class Solfege:
 if len(argv) < 2:
     exit(1)
 
-source_filename = f"{path.splitext(argv[len(argv) - 1])[0]}_solfege.c"
+is_bf = False
+
+if argv[1] == '--bf':
+    if len(argv) == 3:
+        is_bf = True
+    else:
+        print('Use \'--bf\' argument with Brainfuck file!')
+        exit(1)
+
+source_filename = path.splitext(argv[len(argv) - 1])[0]
+
+if not is_bf:
+    source_filename += '_solfege.c'
+else:
+    source_filename += '_lol.solfege'
+
 file = open(argv[len(argv) - 1])
 solfege = Solfege()
+
 
 if Path(source_filename).exists():
     Path(source_filename).unlink()
 
-for line in file.readlines():
-    __tokens__ = line.split(' ')
+if not is_bf:
+    for line in file.readlines():
+        __tokens__ = line.split(' ')
 
-    for token in __tokens__:
-        solfege.codegen(solfege.tokenize(token), token)
+        for token in __tokens__:
+            solfege.codegen(solfege.tokenize(token), token)
+else:
+    for line in file.readlines():
+        for character in line:
+            if character == '\n' or character == ' ': continue
 
-solfege.generated_data += '}'
+            solfege.bf_to_solfege(character)
+
+file.close()
+
+if not is_bf: solfege.generated_data += '}'
 
 source = open(source_filename, 'w')
 source.write(solfege.generated_data)
@@ -268,15 +334,16 @@ source.close()
 if Path(source_filename).exists():
     print(f'Successfully wrote to {source_filename}')
 
-    data = run([
-        "cc",
-        source_filename,
-        "-o",
-        "solfege_data"
-    ])
+    if not is_bf:
+        data = run([
+            "cc",
+            source_filename,
+            "-o",
+            "solfege_data"
+        ])
 
-    if data.stderr:
-        print(f'Error : {data.stdout}')
-        exit(1)
+        if data.stderr:
+            print(f'Error : {data.stdout}')
+            exit(1)
 
-    run(["./solfege_data"])
+        run(["./solfege_data"])
