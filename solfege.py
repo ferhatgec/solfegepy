@@ -12,11 +12,20 @@
 #   github.com/ferhatgec/solfegepy
 #
 
+from sys import argv
+
+
+if len(argv) < 2:
+    print('SolfegePy - An esoteric language implementation in Python\n'
+        '----\n'
+        '--bf : Brainfuck to Solfege codegen')
+
+    exit(1)
+
 from enum import IntEnum
 from os import path
 from pathlib import Path
 from subprocess import run
-from sys import argv
 
 
 class SolfegeTokens(IntEnum):
@@ -283,9 +292,6 @@ class Solfege:
 
             self.print_data += ' '
 
-
-if len(argv) < 2:
-    exit(1)
 
 is_bf = False
 
